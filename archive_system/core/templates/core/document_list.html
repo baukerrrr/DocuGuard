@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>DocuGuard - Архив</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <h1 class="mb-4">🗄️ Архив документов</h1>
+
+    <div class="card shadow">
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Название</th>
+                        <th>Категория</th>
+                        <th>Секретность</th>
+                        <th>Дата</th>
+                        <th>Действие</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in docs %}
+                    <tr>
+                        <td>
+                            <strong>{{ doc.title }}</strong><br>
+                            <small class="text-muted">{{ doc.description }}</small>
+                        </td>
+                        <td>
+                            {% if doc.category %}
+                                <span class="badge bg-secondary">{{ doc.category.name }}</span>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if doc.security_level == 'secret' %}
+                                <span class="badge bg-danger">Секретно</span>
+                            {% elif doc.security_level == 'internal' %}
+                                <span class="badge bg-warning text-dark">Служебный</span>
+                            {% else %}
+                                <span class="badge bg-success">Общий</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ doc.created_at|date:"d.m.Y" }}</td>
+                        <td>
+                            <a href="{{ doc.file.url }}" class="btn btn-sm btn-primary" target="_blank">Скачать</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">Документов пока нет. Загрузите их через админку.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
