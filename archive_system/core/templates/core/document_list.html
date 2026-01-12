@@ -13,7 +13,9 @@
 
         <div>
             {% if user.is_authenticated %}
-                <span class="text-white me-3">Привет, {{ user.username }}!</span>
+                <a href="{% url 'profile' %}" class="text-white me-3 text-decoration-none fw-bold" title="Открыть личный кабинет">
+                    👤 {{ user.username }}
+                </a>
                 <form action="{% url 'logout' %}" method="post" style="display:inline;">
                     {% csrf_token %}
                     <button class="btn btn-sm btn-outline-light">Выйти</button>

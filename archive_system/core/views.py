@@ -5,7 +5,9 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from .models import Document, Category
 from .forms import DocumentForm
-
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
+from django.contrib import messages
 
 # 1. ФУНКЦИЯ ВХОДА (Login)
 def login_view(request):
@@ -93,3 +95,26 @@ def delete_document(request, doc_id):
 
     # Возвращаемся на главную
     return redirect('home')
+
+# 6. ЛИЧНЫЙ КАБИНЕТ
+@login_required
+def profile_view(request):
+    # Считаем, сколько файлов загрузил этот пользователь
+    docs_count = Document.objects.filter(uploaded_by=request.user).count()
+
+    # Логика смены пароля
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            # Важно! Обновляем сессию, иначе пользователя выкинет после смены пароля
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Ваш пароль был успешно изменен!')
+            return redirect('profile')
+    else:
+        form = PasswordChangeForm(request.user)
+
+    return render(request, 'core/profile.html', {
+        'form': form,
+        'docs_count': docs_count
+    })
