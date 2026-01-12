@@ -1,3 +1,4 @@
+from django.shortcuts import render, redirect, get_object_or_404
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm
@@ -78,3 +79,17 @@ def upload_document(request):
         form = DocumentForm()
 
     return render(request, 'core/upload_document.html', {'form': form})
+
+
+# 5. УДАЛЕНИЕ ДОКУМЕНТА
+@login_required
+def delete_document(request, doc_id):
+    # Ищем документ по ID или выдаем ошибку 404
+    doc = get_object_or_404(Document, pk=doc_id)
+
+    # ПРОВЕРКА ПРАВ: Удалить может только Автор или Суперюзер
+    if request.user == doc.uploaded_by or request.user.is_superuser:
+        doc.delete()  # Удаляем из базы и с диска
+
+    # Возвращаемся на главную
+    return redirect('home')

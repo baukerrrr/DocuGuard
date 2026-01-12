@@ -4,12 +4,15 @@ from django.conf import settings
 from django.conf.urls.static import static
 from core.views import document_list, login_view, logout_view, upload_document # <-- Добавили upload_document
 
+from core.views import document_list, login_view, logout_view, upload_document, delete_document # <-- добавили delete_document
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', document_list, name='home'),
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
-    path('upload/', upload_document, name='upload'), # <-- НОВАЯ СТРОКА
+    path('upload/', upload_document, name='upload'),
+    path('delete/<int:doc_id>/', delete_document, name='delete_document'),
 ]
 
 if settings.DEBUG:
