@@ -1,9 +1,33 @@
-from django.shortcuts import render
-from .models import Document, Category  # <-- Не забудь добавить Category сюда!
+from django.shortcuts import render, redirect
+from django.contrib.auth import login, logout
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.decorators import login_required
+from .models import Document, Category
+from .forms import DocumentForm
 
 
+# 1. ФУНКЦИЯ ВХОДА (Login)
+def login_view(request):
+    if request.method == 'POST':
+        form = AuthenticationForm(data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return redirect('home')
+    else:
+        form = AuthenticationForm()
+    return render(request, 'core/login.html', {'form': form})
+
+
+# 2. ФУНКЦИЯ ВЫХОДА (Logout)
+def logout_view(request):
+    logout(request)
+    return redirect('home')
+
+
+# 3. ГЛАВНАЯ СТРАНИЦА (Список + Поиск + Категории)
 def document_list(request):
-    # 1. БЕЗОПАСНОСТЬ: Определяем базовый список доступных документов
+    # А. БЕЗОПАСНОСТЬ: Определяем базовый список доступных документов
     if request.user.is_superuser:
         docs = Document.objects.all()
     elif request.user.is_authenticated:
@@ -11,27 +35,46 @@ def document_list(request):
     else:
         docs = Document.objects.filter(security_level='public')
 
-    # 2. ФИЛЬТР ПО КАТЕГОРИЯМ (Работает с базой данных)
-    # Получаем все категории для меню
+    # Б. ФИЛЬТР ПО КАТЕГОРИЯМ
     categories = Category.objects.all()
-    # Смотрим, выбрал ли пользователь категорию (пришел ли id в ссылке)
     category_id = request.GET.get('category')
 
     if category_id:
-        # Оставляем только документы этой категории
         docs = docs.filter(category_id=category_id)
 
-    # 3. ПОИСК (Работает через Python для строгого соответствия)
+    # В. ПОИСК (Строгий, через Python)
     search_query = request.GET.get('q', '')
     if search_query:
         query_lower = search_query.lower()
+        # Ищем только те, что начинаются с запроса
         docs = [doc for doc in docs if doc.title.lower().startswith(query_lower)]
 
-    # 4. ОТПРАВКА ДАННЫХ
+    # Г. ОТПРАВКА ДАННЫХ
     context = {
         'docs': docs,
-        'categories': categories,  # Список кнопок для меню
-        'current_category': int(category_id) if category_id else None,  # Чтобы подсветить активную кнопку
+        'categories': categories,
+        'current_category': int(category_id) if category_id else None,
         'search_query': search_query
     }
     return render(request, 'core/document_list.html', context)
+
+
+# 4. ЗАГРУЗКА ДОКУМЕНТА (Upload)
+@login_required
+def upload_document(request):
+    if request.method == 'POST':
+        form = DocumentForm(request.POST, request.FILES)
+        if form.is_valid():
+            # 🛑 СТОП! Не сохраняем в базу сразу.
+            doc = form.save(commit=False)
+
+            # ✍️ Вписываем автора вручную (это текущий пользователь)
+            doc.uploaded_by = request.user
+
+            # ✅ Теперь сохраняем окончательно
+            doc.save()
+            return redirect('home')
+    else:
+        form = DocumentForm()
+
+    return render(request, 'core/upload_document.html', {'form': form})

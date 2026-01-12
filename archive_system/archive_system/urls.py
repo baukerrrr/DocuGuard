@@ -1,16 +1,15 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
-from core.views import document_list
+from core.views import document_list, login_view, logout_view, upload_document # <-- Добавили upload_document
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-
-    # Включаем готовые адреса для входа/выхода
-    path('accounts/', include('django.contrib.auth.urls')),
-
     path('', document_list, name='home'),
+    path('login/', login_view, name='login'),
+    path('logout/', logout_view, name='logout'),
+    path('upload/', upload_document, name='upload'), # <-- НОВАЯ СТРОКА
 ]
 
 if settings.DEBUG:
