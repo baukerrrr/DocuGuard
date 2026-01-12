@@ -26,64 +26,99 @@
 </nav>
 
 <div class="container">
-    <div class="card shadow">
-        <div class="card-body">
+    <div class="container-fluid px-4"> <div class="row">
 
-            <h2 class="mb-4">Список документов</h2>
+        <div class="col-md-3 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    📂 Категории
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'home' %}"
+                       class="list-group-item list-group-item-action {% if not current_category %}active{% endif %}">
+                        Все документы
+                    </a>
 
-            <form method="get" class="d-flex gap-2 mb-4">
-                <input type="text"
-                       name="q"
-                       class="form-control"
-                       placeholder="🔍 Найти документ по названию..."
-                       value="{{ search_query }}">
-
-                <button type="submit" class="btn btn-primary">Найти</button>
-
-                {% if search_query %}
-                    <a href="{% url 'home' %}" class="btn btn-secondary">Сбросить</a>
-                {% endif %}
-            </form>
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Название</th>
-                        <th>Категория</th>
-                        <th>Секретность</th>
-                        <th>Файл</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for doc in docs %}
-                    <tr>
-                        <td class="fw-bold">{{ doc.title }}</td>
-                        <td>{{ doc.category.name|default:"-" }}</td>
-                        <td>
-                            {% if doc.security_level == 'secret' %}
-                                <span class="badge bg-danger">🔴 Секретно</span>
-                            {% elif doc.security_level == 'internal' %}
-                                <span class="badge bg-warning text-dark">🟡 Служебный</span>
-                            {% else %}
-                                <span class="badge bg-success">🟢 Общий</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{{ doc.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">Скачать</a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" class="text-center py-4 text-muted">
-                            <h5>Ничего не найдено 🤷‍♂️</h5>
-                            <p>Попробуйте изменить запрос.</p>
-                        </td>
-                    </tr>
+                    {% for cat in categories %}
+                    <a href="?category={{ cat.id }}"
+                       class="list-group-item list-group-item-action {% if current_category == cat.id %}active{% endif %}">
+                        {{ cat.name }}
+                    </a>
                     {% endfor %}
-                </tbody>
-            </table>
-
+                </div>
+            </div>
         </div>
-    </div>
+
+        <div class="col-md-9">
+
+            <div class="card shadow">
+                <div class="card-body">
+
+                    <h2 class="mb-4">
+                        {% if current_category %}
+                             📂 Фильтр: Категория #{{ current_category }}
+                        {% else %}
+                             📑 Все документы
+                        {% endif %}
+                    </h2>
+
+                    <form method="get" class="d-flex gap-2 mb-4">
+                        {% if current_category %}
+                            <input type="hidden" name="category" value="{{ current_category }}">
+                        {% endif %}
+
+                        <input type="text" name="q" class="form-control"
+                               placeholder="🔍 Найти документ..." value="{{ search_query }}">
+
+                        <button type="submit" class="btn btn-primary">Найти</button>
+
+                        {% if search_query or current_category %}
+                            <a href="{% url 'home' %}" class="btn btn-secondary">Сбросить</a>
+                        {% endif %}
+                    </form>
+
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Название</th>
+                                <th>Категория</th>
+                                <th>Секретность</th>
+                                <th>Файл</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in docs %}
+                            <tr>
+                                <td class="fw-bold">{{ doc.title }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ doc.category.name|default:"-" }}</span></td>
+                                <td>
+                                    {% if doc.security_level == 'secret' %}
+                                        <span class="badge bg-danger">🔴 Секретно</span>
+                                    {% elif doc.security_level == 'internal' %}
+                                        <span class="badge bg-warning text-dark">🟡 Служебный</span>
+                                    {% else %}
+                                        <span class="badge bg-success">🟢 Общий</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ doc.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">Скачать</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <h4>Пусто 🍃</h4>
+                                    <p>В этой категории пока нет документов.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+        </div> </div>
+</div>
 </div>
 
 </body>
