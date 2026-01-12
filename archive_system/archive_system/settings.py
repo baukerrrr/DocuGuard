@@ -132,3 +132,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 LANGUAGE_CODE = 'ru-ru'
 TIME_ZONE = 'Asia/Almaty'
 
+# Куда перенаправлять после входа (на главную)
+LOGIN_REDIRECT_URL = 'home'
+
+# Куда перенаправлять после выхода (тоже на главную)
+LOGOUT_REDIRECT_URL = 'home'

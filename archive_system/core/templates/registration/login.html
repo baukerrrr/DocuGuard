@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Вход в систему | DocuGuard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f0f2f5; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .login-card { max-width: 400px; width: 100%; border: none; border-radius: 15px; }
+        .login-header { background: #212529; color: white; border-radius: 15px 15px 0 0; padding: 20px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="card shadow login-card">
+    <div class="login-header">
+        <h3>🔐 Вход в DocuGuard</h3>
+    </div>
+    <div class="card-body p-4">
+        <form method="post">
+            {% csrf_token %}
+
+            {% if form.errors %}
+                <div class="alert alert-danger text-center p-2">
+                    <small>Неверный логин или пароль!</small>
+                </div>
+            {% endif %}
+
+            <div class="mb-3">
+                <label class="form-label text-muted">Имя пользователя</label>
+                <input type="text" name="username" class="form-control form-control-lg" placeholder="Введите логин" required autofocus>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label text-muted">Пароль</label>
+                <input type="password" name="password" class="form-control form-control-lg" placeholder="Введите пароль" required>
+            </div>
+
+            <div class="d-grid gap-2 mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">Войти</button>
+            </div>
+        </form>
+    </div>
+    <div class="card-footer text-center bg-white border-0 pb-3">
+        <small class="text-muted">Забыли пароль? Обратитесь к администратору.</small>
+    </div>
+</div>
+
+</body>
+</html>

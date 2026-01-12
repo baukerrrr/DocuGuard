@@ -3,8 +3,11 @@ from .models import Document
 
 
 def document_list(request):
-    # Получаем все документы из базы
-    docs = Document.objects.all()
+    # Если пользователь вошел (Admin или сотрудник) -> Показываем ВСЁ
+    if request.user.is_authenticated:
+        docs = Document.objects.all()
+    # Если гость -> Показываем только ОБЩИЕ документы
+    else:
+        docs = Document.objects.filter(security_level='public')
 
-    # Отправляем их на страницу (в шаблон)
     return render(request, 'core/document_list.html', {'docs': docs})
