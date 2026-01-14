@@ -29,38 +29,43 @@ def logout_view(request):
 
 
 # 3. ГЛАВНАЯ СТРАНИЦА (Список + Поиск + Категории)
+@login_required
 def document_list(request):
-    # А. БЕЗОПАСНОСТЬ: Определяем базовый список доступных документов
-    if request.user.is_superuser:
-        docs = Document.objects.all()
-    elif request.user.is_authenticated:
-        docs = Document.objects.filter(security_level__in=['public', 'internal'])
-    else:
-        docs = Document.objects.filter(security_level='public')
-
-    # Б. ФИЛЬТР ПО КАТЕГОРИЯМ
-    categories = Category.objects.all()
+    # Получаем параметры из URL
     category_id = request.GET.get('category')
+    search_query = request.GET.get('q', '')
+    sort_param = request.GET.get('sort', 'date_desc')  # По умолчанию: сначала новые
 
+    # Базовый запрос
+    docs = Document.objects.all()
+
+    # Фильтрация
     if category_id:
         docs = docs.filter(category_id=category_id)
 
-    # В. ПОИСК (Строгий, через Python)
-    search_query = request.GET.get('q', '')
     if search_query:
-        query_lower = search_query.lower()
-        # Ищем только те, что начинаются с запроса
-        docs = [doc for doc in docs if doc.title.lower().startswith(query_lower)]
+        docs = docs.filter(title__icontains=search_query)
 
-    # Г. ОТПРАВКА ДАННЫХ
-    context = {
+    # СОРТИРОВКА (Логика)
+    if sort_param == 'name_asc':
+        docs = docs.order_by('title')  # А -> Я
+    elif sort_param == 'name_desc':
+        docs = docs.order_by('-title')  # Я -> А
+    elif sort_param == 'date_asc':
+        docs = docs.order_by('uploaded_at')  # Старые -> Новые
+    else:
+        docs = docs.order_by('-uploaded_at')  # Новые -> Старые (Default)
+
+    categories = Category.objects.all()
+
+    # ВАЖНО: Эта строка должна быть с отступом в 4 пробела (как переменные в начале функции)
+    return render(request, 'core/document_list.html', {
         'docs': docs,
         'categories': categories,
         'current_category': int(category_id) if category_id else None,
-        'search_query': search_query
-    }
-    return render(request, 'core/document_list.html', context)
-
+        'search_query': search_query,
+        'current_sort': sort_param
+    })
 
 # 4. ЗАГРУЗКА ДОКУМЕНТА (Upload)
 @login_required
