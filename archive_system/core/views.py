@@ -147,3 +147,36 @@ def delete_category(request, cat_id):
     category.delete()
     messages.success(request, 'Категория удалена!')
     return redirect('manage_categories')
+
+# 8. РЕДАКТИРОВАНИЕ ДОКУМЕНТА
+@login_required
+def edit_document(request, doc_id):
+    doc = get_object_or_404(Document, id=doc_id)
+
+    # Проверка прав: редактировать может только автор или суперюзер
+    if request.user != doc.uploaded_by and not request.user.is_superuser:
+        messages.error(request, "У вас нет прав на редактирование этого документа.")
+        return redirect('home')
+
+    if request.method == 'POST':
+        doc.title = request.POST.get('title')
+
+        # Обновляем категорию
+        cat_id = request.POST.get('category')
+        if cat_id:
+            doc.category = Category.objects.get(id=cat_id)
+        else:
+            doc.category = None
+
+        # Обновляем секретность
+        doc.security_level = request.POST.get('security_level')
+
+        doc.save()
+        messages.success(request, 'Документ успешно изменен!')
+        return redirect('home')
+
+    categories = Category.objects.all()
+    return render(request, 'core/edit_document.html', {
+        'doc': doc,
+        'categories': categories
+    })

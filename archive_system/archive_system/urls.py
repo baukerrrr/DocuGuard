@@ -5,7 +5,7 @@ from django.conf.urls.static import static
 
 from core.views import (
     document_list, login_view, logout_view, upload_document,
-    delete_document, profile_view, manage_categories, delete_category
+    delete_document, profile_view, manage_categories, delete_category, edit_document
 )
 
 urlpatterns = [
@@ -20,6 +20,7 @@ urlpatterns = [
     # Новые маршруты для управления категориями
     path('categories/', manage_categories, name='manage_categories'),
     path('categories/delete/<int:cat_id>/', delete_category, name='delete_category'),
+    path('edit/<int:doc_id>/', edit_document, name='edit_document'),
 ]
 
 if settings.DEBUG:

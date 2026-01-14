@@ -144,6 +144,11 @@
                                         </a>
 
                                         {% if user == doc.uploaded_by or user.is_superuser %}
+
+                                            <a href="{% url 'edit_document' doc.id %}" class="btn btn-outline-warning" title="Редактировать">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </a>
+
                                             <button type="button" class="btn btn-outline-danger"
                                                     data-bs-toggle="modal" data-bs-target="#deleteModal"
                                                     data-url="{% url 'delete_document' doc.id %}" title="Удалить">
