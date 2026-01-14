@@ -4,19 +4,18 @@
     <meta charset="UTF-8">
     <title>Архив документов | DocuGuard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 </head>
 <body class="bg-light">
 
 <nav class="navbar navbar-dark bg-dark mb-4">
     <div class="container-fluid px-4">
         <a class="navbar-brand" href="{% url 'home' %}">📂 DocuGuard</a>
-
         <div>
             {% if user.is_authenticated %}
-                <a href="{% url 'profile' %}" class="text-white me-3 text-decoration-none fw-bold" title="Открыть личный кабинет">
+                <a href="{% url 'profile' %}" class="text-white me-3 text-decoration-none fw-bold">
                     👤 {{ user.username }}
                 </a>
-
                 <form action="{% url 'logout' %}" method="post" style="display:inline;">
                     {% csrf_token %}
                     <button class="btn btn-sm btn-outline-light">Выйти</button>
@@ -33,19 +32,11 @@
 
         <div class="col-md-3 mb-4">
             <div class="card shadow-sm">
-                <div class="card-header bg-secondary text-white">
-                    📂 Категории
-                </div>
+                <div class="card-header bg-secondary text-white">📂 Категории</div>
                 <div class="list-group list-group-flush">
-                    <a href="{% url 'home' %}"
-                       class="list-group-item list-group-item-action {% if not current_category %}active{% endif %}">
-                        Все документы
-                    </a>
+                    <a href="{% url 'home' %}" class="list-group-item list-group-item-action {% if not current_category %}active{% endif %}">Все документы</a>
                     {% for cat in categories %}
-                    <a href="?category={{ cat.id }}"
-                       class="list-group-item list-group-item-action {% if current_category == cat.id %}active{% endif %}">
-                        {{ cat.name }}
-                    </a>
+                    <a href="?category={{ cat.id }}" class="list-group-item list-group-item-action {% if current_category == cat.id %}active{% endif %}">{{ cat.name }}</a>
                     {% endfor %}
                 </div>
             </div>
@@ -56,87 +47,77 @@
                 <div class="card-body">
 
                     <h2 class="mb-4">
-                        {% if current_category %}
-                             📂 Категория #{{ current_category }}
-                        {% else %}
-                             📑 Все документы
-                        {% endif %}
+                        {% if current_category %} 📂 Категория #{{ current_category }} {% else %} 📑 Все документы {% endif %}
                     </h2>
 
                     <div class="d-flex justify-content-between mb-4">
-
                         <form method="get" class="d-flex gap-2 flex-grow-1 me-3">
-                            {% if current_category %}
-                                <input type="hidden" name="category" value="{{ current_category }}">
-                            {% endif %}
-
-                            <input type="text" name="q" class="form-control"
-                                   placeholder="🔍 Найти документ..." value="{{ search_query }}">
-
+                            {% if current_category %}<input type="hidden" name="category" value="{{ current_category }}">{% endif %}
+                            <input type="text" name="q" class="form-control" placeholder="🔍 Найти документ..." value="{{ search_query }}">
                             <button type="submit" class="btn btn-primary">Найти</button>
-
-                            {% if search_query or current_category %}
-                                <a href="{% url 'home' %}" class="btn btn-outline-secondary">Сбросить</a>
-                            {% endif %}
+                            {% if search_query or current_category %}<a href="{% url 'home' %}" class="btn btn-outline-secondary">Сбросить</a>{% endif %}
                         </form>
-
                         {% if user.is_authenticated %}
-                        <a href="{% url 'upload' %}" class="btn btn-success d-flex align-items-center gap-2 text-nowrap">
-                            <span>📤</span> Загрузить
-                        </a>
+                        <a href="{% url 'upload' %}" class="btn btn-success d-flex align-items-center gap-2 text-nowrap"><span>📤</span> Загрузить</a>
                         {% endif %}
-
                     </div>
 
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th>Название</th>
+                                <th style="width: 50px;">Тип</th> <th>Название</th>
                                 <th>Категория</th>
-                                <th>Дата</th> <th>Секретность</th>
-                                <th>Файл</th>
+                                <th>Дата</th>
+                                <th>Секретность</th>
+                                <th>Действия</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for doc in docs %}
                             <tr>
-                                <td class="fw-bold">{{ doc.title }}</td>
-                                <td><span class="badge bg-light text-dark border">{{ doc.category.name|default:"-" }}</span></td>
+                                <td class="text-center">
+                                    {% if doc.is_image %}
+                                        <img src="{{ doc.file.url }}" alt="img" class="rounded border" style="width: 32px; height: 32px; object-fit: cover;">
 
-                                <td class="text-muted small">
-                                    {{ doc.uploaded_at|date:"d.m.Y H:i" }}
-                                </td>
+                                    {% elif doc.get_extension == '.pdf' %}
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger fs-4"></i>
 
-                                <td>
-                                    {% if doc.security_level == 'secret' %}
-                                        <span class="badge bg-danger">🔴 Секретно</span>
-                                    {% elif doc.security_level == 'internal' %}
-                                        <span class="badge bg-warning text-dark">🟡 Служебный</span>
+                                    {% elif doc.get_extension == '.docx' or doc.get_extension == '.doc' %}
+                                        <i class="bi bi-file-earmark-word-fill text-primary fs-4"></i>
+
+                                    {% elif doc.get_extension == '.xlsx' or doc.get_extension == '.xls' or doc.get_extension == '.csv' %}
+                                        <i class="bi bi-file-earmark-excel-fill text-success fs-4"></i>
+
+                                    {% elif doc.get_extension == '.zip' or doc.get_extension == '.rar' %}
+                                        <i class="bi bi-file-earmark-zip-fill text-warning fs-4"></i>
+
                                     {% else %}
-                                        <span class="badge bg-success">🟢 Общий</span>
+                                        <i class="bi bi-file-earmark-text text-secondary fs-4"></i>
                                     {% endif %}
                                 </td>
-                                <td>
-                                    <a href="{{ doc.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">Скачать</a>
 
+                                <td>
+                                    <div class="fw-bold">{{ doc.title }}</div>
+                                    <small class="text-muted" style="font-size: 0.75rem;">
+                                        {{ doc.get_extension|upper }} </small>
+                                </td>
+
+                                <td><span class="badge bg-light text-dark border">{{ doc.category.name|default:"-" }}</span></td>
+                                <td class="text-muted small">{{ doc.uploaded_at|date:"d.m.Y H:i" }}</td>
+                                <td>
+                                    {% if doc.security_level == 'secret' %} <span class="badge bg-danger">🔴 Секретно</span>
+                                    {% elif doc.security_level == 'internal' %} <span class="badge bg-warning text-dark">🟡 Служебный</span>
+                                    {% else %} <span class="badge bg-success">🟢 Общий</span> {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ doc.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank" title="Скачать">⬇</a>
                                     {% if user == doc.uploaded_by or user.is_superuser %}
-                                        <button type="button"
-                                                class="btn btn-sm btn-outline-danger ms-2"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#deleteModal"
-                                                data-url="{% url 'delete_document' doc.id %}">
-                                           🗑️
-                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger ms-1" data-bs-toggle="modal" data-bs-target="#deleteModal" data-url="{% url 'delete_document' doc.id %}" title="Удалить">🗑</button>
                                     {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center py-5 text-muted">
-                                    <h4>Пусто 🍃</h4>
-                                    <p>В этой категории документов нет.</p>
-                                </td>
-                            </tr>
+                            <tr><td colspan="6" class="text-center py-5 text-muted"><h4>Пусто 🍃</h4><p>В этой категории документов нет.</p></td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -144,40 +125,24 @@
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">⚠️ Подтверждение удаления</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
-      </div>
-      <div class="modal-body">
-        Вы точно хотите удалить этот документ? <br>
-        <span class="text-muted small">Это действие нельзя будет отменить.</span>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-        <a href="#" id="confirmDeleteBtn" class="btn btn-danger">Да, удалить</a>
-      </div>
+      <div class="modal-header"><h5 class="modal-title">⚠️ Удаление</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">Точно удалить?</div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Нет</button><a href="#" id="confirmDeleteBtn" class="btn btn-danger">Да, удалить</a></div>
     </div>
   </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Скрипт для модального окна удаления
     const deleteModal = document.getElementById('deleteModal')
     deleteModal.addEventListener('show.bs.modal', event => {
-        const button = event.relatedTarget
-        const url = button.getAttribute('data-url')
-        const confirmBtn = deleteModal.querySelector('#confirmDeleteBtn')
-        confirmBtn.href = url
+        deleteModal.querySelector('#confirmDeleteBtn').href = event.relatedTarget.getAttribute('data-url')
     })
 </script>
-
 </body>
 </html>

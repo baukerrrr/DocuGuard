@@ -1,3 +1,4 @@
+import os  # <-- НЕ ЗАБУДЬ ЭТУ СТРОКУ
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -21,9 +22,16 @@ class Document(models.Model):
     security_level = models.CharField(max_length=20, choices=SECURITY_CHOICES, default='public')
     file = models.FileField(upload_to='documents/')
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
-
-    # ВОТ ЭТО МЫ ДОБАВЛЯЕМ:
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.title
+
+    # 👇 НОВАЯ ФУНКЦИЯ: возвращает расширение файла (например: .docx)
+    def get_extension(self):
+        name, extension = os.path.splitext(self.file.name)
+        return extension.lower()
+
+    # 👇 НОВАЯ ФУНКЦИЯ: проверяет, картинка это или нет (для превью)
+    def is_image(self):
+        return self.get_extension() in ['.jpg', '.jpeg', '.png', '.gif', '.webp']
