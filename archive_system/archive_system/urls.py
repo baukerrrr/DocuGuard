@@ -3,8 +3,10 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 
-# Вот в этой строке не хватало 'profile_view' в конце
-from core.views import document_list, login_view, logout_view, upload_document, delete_document, profile_view
+from core.views import (
+    document_list, login_view, logout_view, upload_document,
+    delete_document, profile_view, manage_categories, delete_category
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -14,6 +16,10 @@ urlpatterns = [
     path('upload/', upload_document, name='upload'),
     path('delete/<int:doc_id>/', delete_document, name='delete_document'),
     path('profile/', profile_view, name='profile'),
+
+    # Новые маршруты для управления категориями
+    path('categories/', manage_categories, name='manage_categories'),
+    path('categories/delete/<int:cat_id>/', delete_category, name='delete_category'),
 ]
 
 if settings.DEBUG:

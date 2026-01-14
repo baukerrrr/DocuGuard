@@ -1,3 +1,4 @@
+from django.contrib.auth.decorators import login_required, user_passes_test # <-- Добавь user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout
@@ -123,3 +124,26 @@ def profile_view(request):
         'form': form,
         'docs_count': docs_count
     })
+
+
+# 7. УПРАВЛЕНИЕ КАТЕГОРИЯМИ (Только для админа)
+@user_passes_test(lambda u: u.is_superuser)
+def manage_categories(request):
+    # Если отправили форму (создание новой)
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        if name:  # Если имя не пустое
+            Category.objects.create(name=name)
+            messages.success(request, f'Категория "{name}" создана!')
+            return redirect('manage_categories')
+
+    categories = Category.objects.all()
+    return render(request, 'core/category_manager.html', {'categories': categories})
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def delete_category(request, cat_id):
+    category = get_object_or_404(Category, id=cat_id)
+    category.delete()
+    messages.success(request, 'Категория удалена!')
+    return redirect('manage_categories')
