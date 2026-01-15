@@ -1,4 +1,5 @@
 import os
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
@@ -71,3 +72,12 @@ def save_user_profile(sender, instance, **kwargs):
     # Эта строчка нужна для старых пользователей, у которых еще нет профиля
     Profile.objects.get_or_create(user=instance)
     instance.profile.save()
+
+# Модель для публичных ссылок
+class ShareLink(models.Model):
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='share_links')
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False) # Секретный код
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Link for {self.document.title}"

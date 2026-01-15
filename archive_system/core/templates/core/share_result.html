@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Ссылка готова | DocuGuard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center" style="height: 100vh;">
+
+<div class="card shadow text-center p-4" style="max-width: 500px; width: 100%;">
+    <div class="mb-3">
+        <h1 style="font-size: 4rem;">🔗</h1>
+    </div>
+    <h3 class="mb-3">Ссылка готова!</h3>
+    <p class="text-muted">Любой, у кого есть эта ссылка, сможет скачать документ <strong>"{{ doc.title }}"</strong>.</p>
+
+    <div class="input-group mb-3">
+        <input type="text" class="form-control text-center bg-white" value="{{ full_link }}" id="linkInput" readonly>
+        <button class="btn btn-primary" onclick="copyLink()">Копировать</button>
+    </div>
+
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary">Вернуться назад</a>
+</div>
+
+<script>
+    function copyLink() {
+        var copyText = document.getElementById("linkInput");
+        copyText.select();
+        navigator.clipboard.writeText(copyText.value);
+        alert("Ссылка скопирована в буфер обмена!");
+    }
+</script>
+
+</body>
+</html>

@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-2p%7@uq)h$1v=+kae40%n8)&=j1l29t2au&=xe0z3e(+(fd*$h
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -141,3 +141,10 @@ LOGOUT_REDIRECT_URL = 'home'
 # Настройки перенаправления для входа
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
+
+# Это важно, иначе при входе будет ошибка CSRF!
+# Разрешаем доступ с твоего Ngrok адреса
+CSRF_TRUSTED_ORIGINS = [
+    'https://rina-nonextracted-audrianna.ngrok-free.dev', # Твой адрес со скрина
+    'https://*.ngrok-free.app', # На всякий случай для других адресов
+]

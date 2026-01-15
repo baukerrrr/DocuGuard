@@ -5,7 +5,7 @@ from django.conf.urls.static import static
 
 from core.views import (
     document_list, login_view, logout_view, upload_document,
-    delete_document, profile_view, manage_categories, delete_category, edit_document, audit_log_view
+    delete_document, profile_view, manage_categories, delete_category, edit_document, audit_log_view, create_share_link, public_download
 )
 
 urlpatterns = [
@@ -20,6 +20,12 @@ urlpatterns = [
     path('categories/delete/<int:cat_id>/', delete_category, name='delete_category'),
     path('edit/<int:doc_id>/', edit_document, name='edit_document'),
     path('audit/', audit_log_view, name='audit_log'),
+
+    # Генерация ссылки
+    path('share/<int:doc_id>/', create_share_link, name='share_link'),
+
+    # 🌍 Сама публичная ссылка (короткая /s/...)
+    path('s/<uuid:token>/', public_download, name='public_download'),
 ]
 
 if settings.DEBUG:

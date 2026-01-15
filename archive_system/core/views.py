@@ -3,8 +3,9 @@ from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.contrib import messages
-from .models import Document, Category, AuditLog, Profile
+from .models import Document, Category, AuditLog, ShareLink, Profile
 from .forms import DocumentForm, ProfileForm
+from django.http import FileResponse
 
 
 # 1. ФУНКЦИЯ ВХОДА (Login)
@@ -225,3 +226,39 @@ def edit_document(request, doc_id):
 def audit_log_view(request):
     logs = AuditLog.objects.all()
     return render(request, 'core/audit_log.html', {'logs': logs})
+
+
+# 10. СОЗДАНИЕ ПУБЛИЧНОЙ ССЫЛКИ
+@login_required
+def create_share_link(request, doc_id):
+    doc = get_object_or_404(Document, id=doc_id)
+
+    # Проверка прав: только автор или админ могут делиться
+    if request.user != doc.uploaded_by and not request.user.is_superuser:
+        messages.error(request, "У вас нет прав делиться этим файлом.")
+        return redirect('home')
+
+    # Создаем или получаем уже существующую ссылку
+    share_link, created = ShareLink.objects.get_or_create(document=doc)
+
+    # Формируем полный URL (например: http://127.0.0.1:8000/s/uuid/)
+    full_link = request.build_absolute_uri(f"/s/{share_link.token}/")
+
+    return render(request, 'core/share_result.html', {'full_link': full_link, 'doc': doc})
+
+
+# 11. ПУБЛИЧНОЕ СКАЧИВАНИЕ (БЕЗ @login_required !!!)
+def public_download(request, token):
+    # Ищем ссылку по токену
+    share_link = get_object_or_404(ShareLink, token=token)
+    doc = share_link.document
+
+    # Проверяем, существует ли файл физически
+    try:
+        # Открываем файл как поток байтов
+        response = FileResponse(open(doc.file.path, 'rb'))
+        # Заставляем браузер скачивать, а не открывать
+        response['Content-Disposition'] = f'attachment; filename="{doc.file.name.split("/")[-1]}"'
+        return response
+    except FileNotFoundError:
+        raise Http404("Файл не найден на сервере")
