@@ -3,8 +3,8 @@ from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.contrib import messages
-from .models import Document, Category, AuditLog
-from .forms import DocumentForm
+from .models import Document, Category, AuditLog, Profile
+from .forms import DocumentForm, ProfileForm
 
 
 # 1. ФУНКЦИЯ ВХОДА (Login)
@@ -113,23 +113,48 @@ def delete_document(request, doc_id):
     return redirect('home')
 
 
-# 6. ЛИЧНЫЙ КАБИНЕТ
+# 6. ЛИЧНЫЙ КАБИНЕТ (С аватаркой)
 @login_required
 def profile_view(request):
     docs_count = Document.objects.filter(uploaded_by=request.user).count()
 
+    # Убеждаемся, что у пользователя есть профиль (защита от старых ошибок)
+    Profile.objects.get_or_create(user=request.user)
+
     if request.method == 'POST':
-        form = PasswordChangeForm(request.user, request.POST)
-        if form.is_valid():
-            user = form.save()
-            update_session_auth_hash(request, user)
-            messages.success(request, 'Ваш пароль был успешно изменен!')
-            return redirect('profile')
+        # Проверяем, какую кнопку нажал пользователь
+
+        # Если нажали "Сохранить аватар" (в форме будет скрытое поле action="update_avatar")
+        if 'update_avatar' in request.POST:
+            avatar_form = ProfileForm(request.POST, request.FILES, instance=request.user.profile)
+            if avatar_form.is_valid():
+                avatar_form.save()
+                messages.success(request, 'Аватар обновлен!')
+                return redirect('profile')
+            password_form = PasswordChangeForm(request.user)  # Вторую форму оставляем пустой
+
+        # Если нажали "Сменить пароль"
+        elif 'change_password' in request.POST:
+            password_form = PasswordChangeForm(request.user, request.POST)
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, 'Пароль изменен!')
+                return redirect('profile')
+            avatar_form = ProfileForm(instance=request.user.profile)  # Первую форму оставляем старой
+
+        else:
+            avatar_form = ProfileForm(instance=request.user.profile)
+            password_form = PasswordChangeForm(request.user)
+
     else:
-        form = PasswordChangeForm(request.user)
+        # GET-запрос: просто показываем формы
+        avatar_form = ProfileForm(instance=request.user.profile)
+        password_form = PasswordChangeForm(request.user)
 
     return render(request, 'core/profile.html', {
-        'form': form,
+        'avatar_form': avatar_form,
+        'password_form': password_form,
         'docs_count': docs_count
     })
 

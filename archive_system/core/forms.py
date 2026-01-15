@@ -1,5 +1,5 @@
 from django import forms
-from .models import Document
+from .models import Document, Profile
 
 
 class DocumentForm(forms.ModelForm):
@@ -20,3 +20,9 @@ class DocumentForm(forms.ModelForm):
             'security_level': 'Уровень секретности',
             'file': 'Файл документа',
         }
+
+# 👇 НОВАЯ ФОРМА ДЛЯ АВАТАРКИ
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ['avatar']

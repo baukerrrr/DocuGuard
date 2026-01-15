@@ -4,38 +4,125 @@
     <meta charset="UTF-8">
     <title>Загрузка документа | DocuGuard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <style>
+        /* Стили для зоны перетаскивания */
+        .upload-area {
+            border: 2px dashed #adb5bd; /* Серый пунктир */
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.2s ease;
+            margin-top: 10px;
+        }
+
+        /* Когда тащим файл над зоной */
+        .upload-area.dragover {
+            background-color: #e3f2fd; /* Голубой фон */
+            border-color: #0d6efd;     /* Синий пунктир */
+            color: #0d6efd;
+        }
+    </style>
 </head>
 <body class="bg-light">
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
+<div class="container mt-5" style="max-width: 600px;">
+    <div class="card shadow">
+        <div class="card-header bg-success text-white">
+            📤 Загрузка нового документа
+        </div>
+        <div class="card-body">
 
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4>📤 Загрузка нового документа</h4>
+            <form method="post" enctype="multipart/form-data" id="uploadForm">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label">Название документа</label>
+                    <input type="text" name="title" class="form-control" placeholder="Например: Отчет за май" required>
                 </div>
-                <div class="card-body">
 
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-
-                        <div class="mb-3">
-                            {{ form.as_p }}
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-success btn-lg">Сохранить документ</button>
-                            <a href="{% url 'home' %}" class="btn btn-secondary">Отмена</a>
-                        </div>
-                    </form>
-
+                <div class="mb-3">
+                    <label class="form-label">Категория</label>
+                    <select name="category" class="form-select">
+                        <option value="">-- Без категории --</option>
+                        {% for cat in form.fields.category.queryset %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-            </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Уровень доступа</label>
+                    <select name="security_level" class="form-select">
+                        <option value="public">🟢 Общий доступ</option>
+                        <option value="internal">🟡 Служебное пользование</option>
+                        <option value="secret">🔴 Секретно</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Файл</label>
+
+                    <input type="file" name="file" id="fileInput" class="form-control" required>
+
+                    <div class="upload-area text-muted" id="dropZone">
+                        <i class="bi bi-cloud-arrow-up fs-2"></i>
+                        <p class="mb-0 small">...или перетащите файл в эту область</p>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'home' %}" class="btn btn-secondary">Отмена</a>
+                    <button type="submit" class="btn btn-success px-4">Загрузить</button>
+                </div>
+            </form>
 
         </div>
     </div>
 </div>
+
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    // 1. Клик по Drag-зоне тоже открывает выбор файла (для удобства)
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    // 2. Обработка DragOver (визуальный эффект)
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    // 3. DragLeave (убираем эффект)
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    // 4. Drop (Бросаем файл)
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+
+        // ГЛАВНЫЙ ФОКУС:
+        // Передаем файлы из "воздуха" в стандартный инпут
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+
+            // Визуально показываем успех в зоне (опционально)
+            dropZone.innerHTML = '<i class="bi bi-check-circle-fill text-success fs-2"></i><p class="mb-0 text-dark">Файл захвачен!</p>';
+        }
+    });
+
+    // 5. Если выбрали через обычную кнопку — тоже обновим зону (для красоты)
+    fileInput.addEventListener('change', () => {
+         if (fileInput.files.length > 0) {
+             dropZone.innerHTML = '<i class="bi bi-check-circle-fill text-success fs-2"></i><p class="mb-0 text-dark">Файл выбран: ' + fileInput.files[0].name + '</p>';
+         }
+    });
+</script>
 
 </body>
 </html>
