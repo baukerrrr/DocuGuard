@@ -137,3 +137,7 @@ LOGIN_REDIRECT_URL = 'home'
 
 # Куда перенаправлять после выхода (тоже на главную)
 LOGOUT_REDIRECT_URL = 'home'
+
+# Настройки перенаправления для входа
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'home'

@@ -1,14 +1,11 @@
-from django.contrib.auth.decorators import login_required, user_passes_test # <-- Добавь user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
-from django.shortcuts import render, redirect
-from django.contrib.auth import login, logout
-from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.decorators import login_required
-from .models import Document, Category
-from .forms import DocumentForm
-from django.contrib.auth.forms import PasswordChangeForm
-from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import login, logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.contrib import messages
+from .models import Document, Category, AuditLog
+from .forms import DocumentForm
+
 
 # 1. ФУНКЦИЯ ВХОДА (Login)
 def login_view(request):
@@ -35,7 +32,7 @@ def document_list(request):
     # Получаем параметры из URL
     category_id = request.GET.get('category')
     search_query = request.GET.get('q', '')
-    sort_param = request.GET.get('sort', 'date_desc')  # По умолчанию: сначала новые
+    sort_param = request.GET.get('sort', 'date_desc')
 
     # Базовый запрос
     docs = Document.objects.all()
@@ -47,19 +44,18 @@ def document_list(request):
     if search_query:
         docs = docs.filter(title__icontains=search_query)
 
-    # СОРТИРОВКА (Логика)
+    # СОРТИРОВКА
     if sort_param == 'name_asc':
-        docs = docs.order_by('title')  # А -> Я
+        docs = docs.order_by('title')
     elif sort_param == 'name_desc':
-        docs = docs.order_by('-title')  # Я -> А
+        docs = docs.order_by('-title')
     elif sort_param == 'date_asc':
-        docs = docs.order_by('uploaded_at')  # Старые -> Новые
+        docs = docs.order_by('uploaded_at')
     else:
-        docs = docs.order_by('-uploaded_at')  # Новые -> Старые (Default)
+        docs = docs.order_by('-uploaded_at')
 
     categories = Category.objects.all()
 
-    # ВАЖНО: Эта строка должна быть с отступом в 4 пробела (как переменные в начале функции)
     return render(request, 'core/document_list.html', {
         'docs': docs,
         'categories': categories,
@@ -68,20 +64,25 @@ def document_list(request):
         'current_sort': sort_param
     })
 
-# 4. ЗАГРУЗКА ДОКУМЕНТА (Upload)
+
+# 4. ЗАГРУЗКА ДОКУМЕНТА (с записью в журнал)
 @login_required
 def upload_document(request):
     if request.method == 'POST':
         form = DocumentForm(request.POST, request.FILES)
         if form.is_valid():
-            # 🛑 СТОП! Не сохраняем в базу сразу.
             doc = form.save(commit=False)
-
-            # ✍️ Вписываем автора вручную (это текущий пользователь)
             doc.uploaded_by = request.user
-
-            # ✅ Теперь сохраняем окончательно
             doc.save()
+
+            # 🕵️‍♂️ ЗАПИСЬ В ЖУРНАЛ
+            AuditLog.objects.create(
+                user=request.user,
+                action="Загрузка файла",
+                document_title=doc.title
+            )
+
+            messages.success(request, 'Документ успешно загружен!')
             return redirect('home')
     else:
         form = DocumentForm()
@@ -89,31 +90,38 @@ def upload_document(request):
     return render(request, 'core/upload_document.html', {'form': form})
 
 
-# 5. УДАЛЕНИЕ ДОКУМЕНТА
+# 5. УДАЛЕНИЕ ДОКУМЕНТА (с проверкой прав и журналом)
 @login_required
 def delete_document(request, doc_id):
-    # Ищем документ по ID или выдаем ошибку 404
     doc = get_object_or_404(Document, pk=doc_id)
 
-    # ПРОВЕРКА ПРАВ: Удалить может только Автор или Суперюзер
+    # Проверка прав: Автор или Суперюзер
     if request.user == doc.uploaded_by or request.user.is_superuser:
-        doc.delete()  # Удаляем из базы и с диска
 
-    # Возвращаемся на главную
+        # 🕵️‍♂️ ЗАПИСЬ В ЖУРНАЛ (До удаления, чтобы сохранить название)
+        AuditLog.objects.create(
+            user=request.user,
+            action="Удаление файла",
+            document_title=doc.title
+        )
+
+        doc.delete()
+        messages.success(request, 'Документ удален.')
+    else:
+        messages.error(request, 'У вас нет прав на удаление этого документа.')
+
     return redirect('home')
+
 
 # 6. ЛИЧНЫЙ КАБИНЕТ
 @login_required
 def profile_view(request):
-    # Считаем, сколько файлов загрузил этот пользователь
     docs_count = Document.objects.filter(uploaded_by=request.user).count()
 
-    # Логика смены пароля
     if request.method == 'POST':
         form = PasswordChangeForm(request.user, request.POST)
         if form.is_valid():
             user = form.save()
-            # Важно! Обновляем сессию, иначе пользователя выкинет после смены пароля
             update_session_auth_hash(request, user)
             messages.success(request, 'Ваш пароль был успешно изменен!')
             return redirect('profile')
@@ -129,10 +137,9 @@ def profile_view(request):
 # 7. УПРАВЛЕНИЕ КАТЕГОРИЯМИ (Только для админа)
 @user_passes_test(lambda u: u.is_superuser)
 def manage_categories(request):
-    # Если отправили форму (создание новой)
     if request.method == 'POST':
         name = request.POST.get('name')
-        if name:  # Если имя не пустое
+        if name:
             Category.objects.create(name=name)
             messages.success(request, f'Категория "{name}" создана!')
             return redirect('manage_categories')
@@ -148,12 +155,12 @@ def delete_category(request, cat_id):
     messages.success(request, 'Категория удалена!')
     return redirect('manage_categories')
 
-# 8. РЕДАКТИРОВАНИЕ ДОКУМЕНТА
+
+# 8. РЕДАКТИРОВАНИЕ ДОКУМЕНТА (с журналом)
 @login_required
 def edit_document(request, doc_id):
     doc = get_object_or_404(Document, id=doc_id)
 
-    # Проверка прав: редактировать может только автор или суперюзер
     if request.user != doc.uploaded_by and not request.user.is_superuser:
         messages.error(request, "У вас нет прав на редактирование этого документа.")
         return redirect('home')
@@ -161,17 +168,23 @@ def edit_document(request, doc_id):
     if request.method == 'POST':
         doc.title = request.POST.get('title')
 
-        # Обновляем категорию
         cat_id = request.POST.get('category')
         if cat_id:
             doc.category = Category.objects.get(id=cat_id)
         else:
             doc.category = None
 
-        # Обновляем секретность
         doc.security_level = request.POST.get('security_level')
 
         doc.save()
+
+        # 🕵️‍♂️ ЗАПИСЬ В ЖУРНАЛ
+        AuditLog.objects.create(
+            user=request.user,
+            action="Редактирование",
+            document_title=doc.title
+        )
+
         messages.success(request, 'Документ успешно изменен!')
         return redirect('home')
 
@@ -180,3 +193,10 @@ def edit_document(request, doc_id):
         'doc': doc,
         'categories': categories
     })
+
+
+# 9. ПРОСМОТР ЖУРНАЛА (Новая функция)
+@user_passes_test(lambda u: u.is_superuser)
+def audit_log_view(request):
+    logs = AuditLog.objects.all()
+    return render(request, 'core/audit_log.html', {'logs': logs})

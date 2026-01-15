@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Журнал безопасности | DocuGuard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-dark mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'home' %}">← Назад к документам</a>
+        <span class="text-white">🛡️ Журнал аудита</span>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="card shadow">
+        <div class="card-body">
+            <h4 class="mb-3">История действий</h4>
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Время</th>
+                        <th>Пользователь</th>
+                        <th>Действие</th>
+                        <th>Документ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.timestamp|date:"d.m.Y H:i:s" }}</td>
+                        <td>
+                            {% if log.user %}
+                                <span class="badge bg-primary">{{ log.user.username }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Удален</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.action == 'Удаление файла' %}
+                                <span class="text-danger fw-bold">{{ log.action }}</span>
+                            {% elif log.action == 'Загрузка файла' %}
+                                <span class="text-success fw-bold">{{ log.action }}</span>
+                            {% else %}
+                                <span class="text-warning fw-bold">{{ log.action }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.document_title }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center">Журнал пока пуст</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

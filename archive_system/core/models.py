@@ -35,3 +35,16 @@ class Document(models.Model):
     # 👇 НОВАЯ ФУНКЦИЯ: проверяет, картинка это или нет (для превью)
     def is_image(self):
         return self.get_extension() in ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+
+# Модель для журнала действий
+class AuditLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name="Пользователь")
+    action = models.CharField(max_length=50, verbose_name="Действие")  # Например: "Загрузка", "Удаление"
+    document_title = models.CharField(max_length=255, verbose_name="Документ")
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name="Время")
+
+    def __str__(self):
+        return f"{self.user} - {self.action} - {self.timestamp}"
+
+    class Meta:
+        ordering = ['-timestamp']  # Сначала новые записи

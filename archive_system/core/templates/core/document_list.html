@@ -40,10 +40,14 @@
                     {% endfor %}
                 </div>
             </div>
+
             {% if user.is_superuser %}
             <div class="mt-3">
-                <a href="{% url 'manage_categories' %}" class="btn btn-outline-dark w-100">
+                <a href="{% url 'manage_categories' %}" class="btn btn-outline-dark w-100 mb-2">
                     ⚙️ Управление категориями
+                </a>
+                <a href="{% url 'audit_log' %}" class="btn btn-outline-danger w-100">
+                    🛡️ Журнал безопасности
                 </a>
             </div>
             {% endif %}
