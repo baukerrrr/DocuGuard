@@ -1,3 +1,17 @@
-.venv/
+# Django стандарт
+*.log
+*.pot
+*.pyc
 __pycache__/
 db.sqlite3
+media/
+staticfiles/
+
+# Виртуальное окружение (если папка называется venv или env)
+venv/
+env/
+.env
+
+# Идеи редакторов
+.idea/
+.vscode/

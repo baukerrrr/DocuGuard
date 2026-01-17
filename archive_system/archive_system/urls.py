@@ -2,10 +2,11 @@ from django.contrib import admin
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
+from core import views
 
 from core.views import (
     document_list, login_view, logout_view, upload_document,
-    delete_document, profile_view, manage_categories, delete_category, edit_document, audit_log_view, create_share_link, public_download
+    delete_document, profile_view, manage_categories, delete_category, edit_document, audit_log_view, create_share_link, public_download,
 )
 
 urlpatterns = [
@@ -26,6 +27,8 @@ urlpatterns = [
 
     # 🌍 Сама публичная ссылка (короткая /s/...)
     path('s/<uuid:token>/', public_download, name='public_download'),
+
+    path('document/<int:doc_id>/open/', views.open_file, name='open_file'),
 ]
 
 if settings.DEBUG:

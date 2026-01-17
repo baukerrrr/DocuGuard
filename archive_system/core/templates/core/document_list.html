@@ -2,30 +2,39 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Архив документов | DocuGuard</title>
+    <title>DocuGuard | Панель управления</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        .upload-area { border: 2px dashed #adb5bd; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; }
+        .upload-area:hover { background-color: #f8f9fa; border-color: #0d6efd; }
+        .upload-area.dragover { background-color: #e3f2fd; border-color: #0d6efd; }
+        .preview-frame { width: 100%; height: 500px; border: none; }
+    </style>
 </head>
 <body class="bg-light">
 
 <nav class="navbar navbar-dark bg-dark mb-4">
-    <div class="container-fluid px-4">
+    <div class="container-fluid px-4 d-flex justify-content-between">
         <a class="navbar-brand" href="{% url 'home' %}">📂 DocuGuard</a>
 
         <div class="d-flex align-items-center">
             {% if user.is_authenticated %}
-                <a href="{% url 'profile' %}" class="text-white me-3 text-decoration-none fw-bold d-inline-flex align-items-center gap-2" title="Открыть личный кабинет">
+                <a href="{% url 'profile' %}" class="text-white me-3 text-decoration-none fw-bold d-inline-flex align-items-center gap-2">
                     {% if user.profile.avatar %}
                         <img src="{{ user.profile.avatar.url }}" class="rounded-circle border border-white" width="32" height="32" style="object-fit: cover;">
                     {% else %}
-                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center border border-white" style="width: 32px; height: 32px; font-size: 14px;">
+                        <div class="rounded-circle bg-primary text-center border border-white" style="width:32px; height:32px; line-height:32px;">
                             {{ user.username|slice:":1"|upper }}
                         </div>
                     {% endif %}
                     <span>{{ user.username }}</span>
                 </a>
 
-                <form action="{% url 'logout' %}" method="post" class="d-flex">
+                <form action="{% url 'logout' %}" method="post" class="m-0">
                     {% csrf_token %}
                     <button class="btn btn-sm btn-outline-light">Выйти</button>
                 </form>
@@ -40,7 +49,7 @@
     <div class="row">
 
         <div class="col-md-3 mb-4">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm mb-3">
                 <div class="card-header bg-secondary text-white">📂 Категории</div>
                 <div class="list-group list-group-flush">
                     <a href="{% url 'home' %}" class="list-group-item list-group-item-action {% if not current_category %}active{% endif %}">Все документы</a>
@@ -51,14 +60,8 @@
             </div>
 
             {% if user.is_superuser %}
-            <div class="mt-3">
-                <a href="{% url 'manage_categories' %}" class="btn btn-outline-dark w-100 mb-2">
-                    ⚙️ Управление категориями
-                </a>
-                <a href="{% url 'audit_log' %}" class="btn btn-outline-danger w-100">
-                    🛡️ Журнал безопасности
-                </a>
-            </div>
+                <a href="{% url 'manage_categories' %}" class="btn btn-outline-dark w-100 mb-2">⚙️ Управление категориями</a>
+                <a href="{% url 'audit_log' %}" class="btn btn-outline-danger w-100">🛡️ Журнал аудита</a>
             {% endif %}
         </div>
 
@@ -66,49 +69,63 @@
             <div class="card shadow">
                 <div class="card-body">
 
-                    <h2 class="mb-4">
-                        {% if current_category %} 📂 Категория #{{ current_category }} {% else %} 📑 Все документы {% endif %}
-                    </h2>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="m-0">📑 Документы</h2>
+                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                            📤 Загрузить
+                        </button>
+                    </div>
 
-                    <div class="d-flex justify-content-between mb-4">
+                    <form method="get" class="row g-2 mb-4 align-items-center" id="filterForm">
 
-                        <form method="get" class="d-flex gap-2 flex-grow-1 me-3">
-                            {% if current_category %}
-                                <input type="hidden" name="category" value="{{ current_category }}">
-                            {% endif %}
-
-                            <input type="text" name="q" class="form-control"
-                                   placeholder="🔍 Найти документ..." value="{{ search_query }}">
-
-                            <select name="sort" class="form-select" style="max-width: 200px;" onchange="this.form.submit()">
-                                <option value="date_desc" {% if current_sort == 'date_desc' %}selected{% endif %}>📅 Сначала новые</option>
-                                <option value="date_asc" {% if current_sort == 'date_asc' %}selected{% endif %}>📅 Сначала старые</option>
-                                <option value="name_asc" {% if current_sort == 'name_asc' %}selected{% endif %}>🔤 По названию (А-Я)</option>
-                                <option value="name_desc" {% if current_sort == 'name_desc' %}selected{% endif %}>🔤 По названию (Я-А)</option>
-                            </select>
-
-                            <button type="submit" class="btn btn-primary">Найти</button>
-
-                            {% if search_query or current_category %}
-                                <a href="{% url 'home' %}" class="btn btn-outline-secondary">Сбросить</a>
-                            {% endif %}
-                        </form>
-
-                        {% if user.is_authenticated %}
-                        <a href="{% url 'upload' %}" class="btn btn-success d-flex align-items-center gap-2 text-nowrap"><span>📤</span> Загрузить</a>
+                        {% if current_category %}
+                            <input type="hidden" name="category" value="{{ current_category }}">
                         {% endif %}
 
-                    </div>
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                <input type="text" name="q" class="form-control" placeholder="Найти документ (Enter)..." value="{{ search_query }}">
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <select name="type" class="form-select" onchange="document.getElementById('filterForm').submit()">
+                                <option value="">📄 Все типы</option>
+                                <option value="pdf" {% if current_type == 'pdf' %}selected{% endif %}>🟥 PDF</option>
+                                <option value="word" {% if current_type == 'word' %}selected{% endif %}>🟦 Word</option>
+                                <option value="excel" {% if current_type == 'excel' %}selected{% endif %}>🟩 Excel</option>
+                                <option value="image" {% if current_type == 'image' %}selected{% endif %}>🖼️ Картинки</option>
+                                <option value="archive" {% if current_type == 'archive' %}selected{% endif %}>📦 Архивы</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <select name="sort" class="form-select" onchange="document.getElementById('filterForm').submit()">
+                                <option value="date_desc" {% if current_sort == 'date_desc' %}selected{% endif %}>📅 Сначала новые</option>
+                                <option value="date_asc" {% if current_sort == 'date_asc' %}selected{% endif %}>📅 Сначала старые</option>
+                                <option value="name_asc" {% if current_sort == 'name_asc' %}selected{% endif %}>🔤 А-Я</option>
+                                <option value="name_desc" {% if current_sort == 'name_desc' %}selected{% endif %}>🔤 Я-А</option>
+                            </select>
+                        </div>
+
+                        {% if search_query or current_category or current_type %}
+                        <div class="col-12 mt-2 text-end">
+                            <a href="{% url 'home' %}" class="text-decoration-none text-muted small">
+                                ❌ Сбросить фильтры
+                            </a>
+                        </div>
+                        {% endif %}
+                    </form>
 
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 50px;">Тип</th>
+                                <th>Тип</th>
                                 <th>Название</th>
-                                <th>Категория</th>
                                 <th>Дата</th>
-                                <th>Секретность</th>
-                                <th>Действия</th>
+                                <th>Доступ</th>
+                                <th style="width: 180px;">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -116,15 +133,13 @@
                             <tr>
                                 <td class="text-center">
                                     {% if doc.is_image %}
-                                        <img src="{{ doc.file.url }}" alt="img" class="rounded border" style="width: 32px; height: 32px; object-fit: cover;">
+                                        <i class="bi bi-image text-primary fs-4"></i>
                                     {% elif doc.get_extension == '.pdf' %}
-                                        <i class="bi bi-file-earmark-pdf-fill text-danger fs-4"></i>
+                                        <i class="bi bi-file-earmark-pdf text-danger fs-4"></i>
                                     {% elif doc.get_extension == '.docx' or doc.get_extension == '.doc' %}
-                                        <i class="bi bi-file-earmark-word-fill text-primary fs-4"></i>
-                                    {% elif doc.get_extension == '.xlsx' or doc.get_extension == '.xls' or doc.get_extension == '.csv' %}
-                                        <i class="bi bi-file-earmark-excel-fill text-success fs-4"></i>
-                                    {% elif doc.get_extension == '.zip' or doc.get_extension == '.rar' %}
-                                        <i class="bi bi-file-earmark-zip-fill text-warning fs-4"></i>
+                                        <i class="bi bi-file-earmark-word text-primary fs-4"></i>
+                                    {% elif doc.get_extension == '.xlsx' or doc.get_extension == '.xls' %}
+                                        <i class="bi bi-file-earmark-excel text-success fs-4"></i>
                                     {% else %}
                                         <i class="bi bi-file-earmark-text text-secondary fs-4"></i>
                                     {% endif %}
@@ -132,79 +147,307 @@
 
                                 <td>
                                     <div class="fw-bold">{{ doc.title }}</div>
-                                    <small class="text-muted" style="font-size: 0.75rem;">{{ doc.get_extension|upper }}</small>
+                                    <small class="text-muted" style="font-size: 0.75rem;">
+                                        {{ doc.get_extension|upper|slice:"1:" }}
+                                    </small>
                                 </td>
 
-                                <td><span class="badge bg-light text-dark border">{{ doc.category.name|default:"-" }}</span></td>
-                                <td class="text-muted small">{{ doc.uploaded_at|date:"d.m.Y H:i" }}</td>
+                                <td class="small text-muted">{{ doc.uploaded_at|date:"d.m.Y" }}</td>
 
                                 <td>
-                                    {% if doc.security_level == 'secret' %} <span class="badge bg-danger">🔴 Секретно</span>
-                                    {% elif doc.security_level == 'internal' %} <span class="badge bg-warning text-dark">🟡 Служебный</span>
-                                    {% else %} <span class="badge bg-success">🟢 Общий</span> {% endif %}
+                                    {% if doc.security_level == 'secret' %}<span class="badge bg-danger">🔴 Секретно</span>
+                                    {% elif doc.security_level == 'internal' %}<span class="badge bg-warning text-dark">🟡 Служебный</span>
+                                    {% else %}<span class="badge bg-success">🟢 Общий</span>{% endif %}
                                 </td>
 
                                 <td>
-                                    <div class="btn-group btn-group-sm shadow-sm">
-                                        {% if doc.is_image or doc.get_extension == '.pdf' %}
-                                            <a href="{{ doc.file.url }}" target="_blank" class="btn btn-outline-primary" title="Просмотреть">
-                                                <i class="bi bi-eye-fill"></i>
+                                    <div class="btn-group btn-group-sm">
+
+                                        {% if doc.get_extension == '.pdf' or doc.is_image %}
+                                            <a href="{% url 'open_file' doc.id %}" target="_blank" class="btn btn-outline-primary" title="Открыть">
+                                                <i class="bi bi-eye"></i>
                                             </a>
+
+                                        {% elif doc.get_extension == '.docx' %}
+                                            <button class="btn btn-outline-primary"
+                                                onclick="showPreview('{% url 'open_file' doc.id %}', '{{ doc.title }}', '{{ doc.get_extension }}')"
+                                                title="Предпросмотр">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+
+                                        {% elif doc.get_extension == '.xlsx' or doc.get_extension == '.xls' %}
+                                            <button class="btn btn-outline-primary"
+                                                onclick="showPreview('{% url 'open_file' doc.id %}', '{{ doc.title }}', '{{ doc.get_extension }}')"
+                                                title="Предпросмотр таблицы">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+
                                         {% endif %}
 
-                                        <a href="{{ doc.file.url }}" download class="btn btn-outline-success" title="Скачать">
+                                        {% if user == doc.uploaded_by or user.is_superuser %}
+                                        <a href="{% url 'share_link' doc.id %}" class="btn btn-outline-info" title="Поделиться">
+                                            <i class="bi bi-link-45deg"></i>
+                                        </a>
+                                        {% endif %}
+
+                                        <a href="{% url 'open_file' doc.id %}?download=1" class="btn btn-outline-success" title="Скачать">
                                             <i class="bi bi-download"></i>
                                         </a>
 
                                         {% if user == doc.uploaded_by or user.is_superuser %}
-                                            <a href="{% url 'share_link' doc.id %}" class="btn btn-outline-info" title="Поделиться ссылкой">
-                                                <i class="bi bi-link-45deg"></i>
-                                            </a>
-                                        {% endif %}
+                                            <button class="btn btn-outline-warning"
+                                                onclick="editDoc('{{ doc.id }}', '{{ doc.title }}', '{{ doc.category.id|default_if_none:'' }}', '{{ doc.security_level }}')"
+                                                title="Редактировать">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
 
-                                        {% if user == doc.uploaded_by or user.is_superuser %}
-
-                                            <a href="{% url 'edit_document' doc.id %}" class="btn btn-outline-warning" title="Редактировать">
-                                                <i class="bi bi-pencil-fill"></i>
-                                            </a>
-
-                                            <button type="button" class="btn btn-outline-danger"
-                                                    data-bs-toggle="modal" data-bs-target="#deleteModal"
-                                                    data-url="{% url 'delete_document' doc.id %}" title="Удалить">
-                                               <i class="bi bi-trash-fill"></i>
+                                            <button class="btn btn-outline-danger" onclick="confirmDelete('{% url 'delete_document' doc.id %}')" title="Удалить">
+                                                <i class="bi bi-trash"></i>
                                             </button>
                                         {% endif %}
                                     </div>
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="6" class="text-center py-5 text-muted"><h4>Пусто 🍃</h4><p>В этой категории документов нет.</p></td></tr>
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">Документов не найдено 🍃</td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
+
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">⚠️ Удаление</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body">Вы точно хотите удалить этот документ?</div>
-      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Нет</button><a href="#" id="confirmDeleteBtn" class="btn btn-danger">Да, удалить</a></div>
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="{% url 'upload' %}" method="post" enctype="multipart/form-data" class="modal-content">
+            {% csrf_token %}
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Загрузить файл</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" name="title" class="form-control mb-3" placeholder="Название документа" required>
+
+                <select name="category" class="form-select mb-3">
+                    <option value="">📂 Без категории</option>
+                    {% for cat in categories %}<option value="{{ cat.id }}">{{ cat.name }}</option>{% endfor %}
+                </select>
+
+                <select name="security_level" class="form-select mb-3">
+                    <option value="public" selected>🟢 Общий доступ</option>
+                    <option value="internal">🟡 Служебный</option>
+                    <option value="secret">🔴 Секретно</option>
+                </select>
+
+                <div class="upload-area" id="dropZone">
+                    <i class="bi bi-cloud-arrow-up fs-2"></i>
+                    <p id="fileLabel">Перетащите файл или кликните</p>
+                    <input type="file" name="file" id="fileInput" class="d-none" required>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-success">Сохранить</button></div>
+        </form>
     </div>
-  </div>
+</div>
+
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" id="editForm" class="modal-content">
+            {% csrf_token %}
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">✏️ Редактирование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Название документа</label>
+                    <input type="text" name="title" id="editTitle" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Категория</label>
+                    <select name="category" id="editCategory" class="form-select">
+                        <option value="">📂 Без категории</option>
+                        {% for cat in categories %}<option value="{{ cat.id }}">{{ cat.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Уровень доступа</label>
+                    <select name="security_level" id="editSecurity" class="form-select">
+                        <option value="public">🟢 Общий доступ</option>
+                        <option value="internal">🟡 Служебный</option>
+                        <option value="secret">🔴 Секретно</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-warning">Сохранить изменения</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewTitle">Просмотр</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" id="previewBody">
+                </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center pt-4">
+                <h5 class="mb-3">Удалить? 🗑️</h5>
+                <p class="text-muted">Это действие нельзя отменить.</p>
+            </div>
+            <div class="modal-footer justify-content-center border-0 pb-4">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Нет</button>
+                <a id="deleteConfirmBtn" href="#" class="btn btn-danger">Да, удалить</a>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-    // Скрипт для подстановки правильной ссылки в модальное окно удаления
-    const deleteModal = document.getElementById('deleteModal')
-    deleteModal.addEventListener('show.bs.modal', event => {
-        deleteModal.querySelector('#confirmDeleteBtn').href = event.relatedTarget.getAttribute('data-url')
-    })
+    // ------------------------------------------
+    // 1. ФУНКЦИЯ РЕДАКТИРОВАНИЯ
+    // ------------------------------------------
+    function editDoc(id, title, catId, secLevel) {
+        // Заполняем поля
+        document.getElementById('editTitle').value = title;
+        document.getElementById('editCategory').value = catId;
+        document.getElementById('editSecurity').value = secLevel;
+
+        // Ставим правильный URL для отправки
+        const form = document.getElementById('editForm');
+        form.action = `/edit/${id}/`;
+
+        // Открываем модалку
+        new bootstrap.Modal(document.getElementById('editModal')).show();
+    }
+
+    // ------------------------------------------
+    // 2. ФУНКЦИЯ ПРЕДПРОСМОТРА (Word + Excel)
+    // ------------------------------------------
+    function showPreview(url, title, ext) {
+        const body = document.getElementById('previewBody');
+        document.getElementById('previewTitle').innerText = title;
+
+        // Показываем лоадер
+        body.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div><p class="mt-2">Загрузка...</p></div>';
+        new bootstrap.Modal(document.getElementById('previewModal')).show();
+
+        ext = ext.toLowerCase();
+
+        // A. WORD (DOCX)
+        if (ext === '.docx') {
+            fetch(url)
+                .then(r => r.arrayBuffer())
+                .then(b => mammoth.convertToHtml({arrayBuffer: b}))
+                .then(res => {
+                    body.innerHTML = `<div class="p-4 bg-white shadow-sm" style="overflow-y: auto; max-height: 80vh;">${res.value}</div>`;
+                })
+                .catch(err => showError(url));
+        }
+
+        // B. 👇 НОВОЕ: EXCEL (XLSX / XLS)
+        else if (ext === '.xlsx' || ext === '.xls') {
+            fetch(url)
+                .then(res => res.arrayBuffer())
+                .then(data => {
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0]; // Берем первый лист
+                    const worksheet = workbook.Sheets[firstSheetName];
+
+                    // Конвертируем в HTML таблицу
+                    const htmlString = XLSX.utils.sheet_to_html(worksheet, { id: "excelTable", editable: false });
+
+                    // Вставляем с небольшими стилями, чтобы было красиво
+                    body.innerHTML = `
+                        <style>
+                            #excelTable { width: 100%; border-collapse: collapse; }
+                            #excelTable td, #excelTable th { border: 1px solid #dee2e6; padding: 8px; font-family: monospace;}
+                        </style>
+                        <div class="p-3 bg-white" style="overflow: auto; max-height: 80vh;">
+                            ${htmlString}
+                        </div>`;
+                })
+                .catch(err => showError(url));
+        }
+    }
+
+    function showError(url) {
+        const body = document.getElementById('previewBody');
+        body.innerHTML = `
+            <div class="text-center p-5">
+                <h5>Ошибка отображения</h5>
+                <p class="text-muted">Не удалось открыть предпросмотр.</p>
+                <a href="${url}?download=1" class="btn btn-primary mt-3">Скачать файл</a>
+            </div>`;
+    }
+
+    function getDownloadFallback(url, msg="Предпросмотр недоступен") {
+        return `
+            <div class="d-flex flex-column align-items-center justify-content-center" style="height: 300px;">
+                <i class="bi bi-file-earmark-text display-1 text-secondary mb-3"></i>
+                <h5>${msg}</h5>
+                <a href="${url}" download class="btn btn-primary mt-3">
+                    <i class="bi bi-download"></i> Скачать файл
+                </a>
+            </div>`;
+    }
+
+    // ------------------------------------------
+    // 3. УДАЛЕНИЕ
+    // ------------------------------------------
+    function confirmDelete(url) {
+        document.getElementById('deleteConfirmBtn').href = url;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+
+    // ------------------------------------------
+    // 4. DRAG-AND-DROP + АВТОЗАПОЛНЕНИЕ
+    // ------------------------------------------
+    const dz = document.getElementById('dropZone');
+    const fi = document.getElementById('fileInput');
+    const titleInput = document.querySelector('input[name="title"]');
+
+    function handleFile(file) {
+        document.getElementById('fileLabel').innerText = file.name;
+        // Если поле названия пустое, подставляем имя файла
+        if (titleInput.value.trim() === '') {
+            titleInput.value = file.name;
+        }
+    }
+
+    dz.onclick = () => fi.click();
+    fi.onchange = () => { if (fi.files.length > 0) handleFile(fi.files[0]); };
+
+    dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('dragover'); };
+    dz.ondragleave = () => dz.classList.remove('dragover');
+
+    dz.ondrop = (e) => {
+        e.preventDefault();
+        dz.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            fi.files = e.dataTransfer.files;
+            handleFile(fi.files[0]);
+        }
+    };
 </script>
+
 </body>
 </html>

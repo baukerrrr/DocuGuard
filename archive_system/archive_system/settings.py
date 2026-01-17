@@ -145,6 +145,21 @@ LOGIN_REDIRECT_URL = 'home'
 # Это важно, иначе при входе будет ошибка CSRF!
 # Разрешаем доступ с твоего Ngrok адреса
 CSRF_TRUSTED_ORIGINS = [
-    'https://rina-nonextracted-audrianna.ngrok-free.dev', # Твой адрес со скрина
-    'https://*.ngrok-free.app', # На всякий случай для других адресов
+    'https://rina-nonextracted-audrianna.ngrok-free.dev',
+    'https://*.ngrok-free.app',
 ]
+
+# Разрешает просмотр PDF
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+# === НАСТРОЙКИ ДЛЯ NGROK (Вставь в конец файла) ===
+
+# 1. Говорим Django, что мы за прокси (Ngrok) и это нормально
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# 2. Разрешаем показывать сайт во фреймах (для PDF)
+X_FRAME_OPTIONS = 'ALLOWALL'
+
+# 3. Разрешаем куки и CSRF через безопасное соединение
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
